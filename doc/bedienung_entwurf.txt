@@ -1,0 +1,33 @@
+﻿// Messung der Umdrehung im Info Screen -> mit Eingaben und ISR und ohne ISR für Tasteneingabe
+// Eventuell muss sofort in den Infoscreen gesprungen werden wenn der Floppymotor angeht
+// und aus dem Infoscreen kommt man erst wenn der Motor aus ist !! Muss alles noch getestet werden.
+
+// 1541-rebuild kann 3 Tasten auswerten
+- Button1 - Hoch	
+- Button2 - Runter
+- Button3 - Enter 
+
+// Grundlegende Sachen //
+- nach dem Start befindet sich die 1541-rebuild immer im Info Screen [erledit!]
+- durch drücken von Enter wechselt man vom Info Screen ins Menü [erledit!]
+- durch längeres drücken von Enter kommt man wieder zurück in den Info Screen, oder eine Menü Ebene wieder hoch [erledit!]
+- die Position im Menü wird sich gemerkt
+
+// Info Screen //
+- Anzeige der aktuellen Spur / Motor Status / Write Protect [erledit!]
+- Anzeige aktuelles Images (Dateiname länger als 20 Zeichen soll gescrollt werden), [erledit!]
+
+// Menü //
+- [Image]
+  - [Mount]	[erledit!]
+  - [UnMount]	[erledit!]
+  - [New]
+  - [Save]
+- [Settings]
+  - Track auswählen (+/- 1-35)
+  - Rotation Speed (Speedzonen Geschwindigkeiten)
+  - Export to SD
+  - Import from SD
+- [Info]
+  - [Version] - Anzeige der Versionsnummer
+  

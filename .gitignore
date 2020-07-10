@@ -2,3 +2,14 @@
 *pcb-bak
 *.user
 .directory
+*-bak
+*.bck
+fp-info-cache
+*.bin
+*.dsn
+*.rules
+*.xml
+*.ses
+_autosave-*
+firmware/firmware_1541_rebuild.*
+/tests

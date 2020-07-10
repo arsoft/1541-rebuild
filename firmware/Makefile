@@ -1,6 +1,6 @@
 # Hey Emacs, this is a -*- makefile -*-
 #
-# WinAVR makefile written by Eric B. Weddington, Jörg Wunsch, et al.
+# WinAVR makefile written by Eric B. Weddington, JÃ¶rg Wunsch, et al.
 # Released to the Public Domain
 # Please read the make user manual!
 #
@@ -71,18 +71,20 @@ AVRDUDE_PROGRAMMER = avrispmkII
 # com1 = serial port. Use lpt1 to connect to parallel port.
 AVRDUDE_PORT = usb    # programmer connected to serial device
 
-# ISP Speed in µs (1/4 vom CPU Takt)
-AVRDUDE_ISP_SPEED = 0.2  # (1/20000000Hz)*4
+# ISP Speed in Âµs (1/4 vom CPU Takt)
+AVRDUDE_ISP_SPEED = 0.1666  # (1/24000000Hz)*4 = 1.666Âµs
 
 # List C source files here. (C dependencies are automatically generated.)
 SRC = main.c
 SRC += lcd.c
-# Sourcen der SD Card Lib von Roland Riegel hinzufügen
+SRC += menu.c
+SRC += settings.c
+
+# Sourcen der SD Card Lib von Roland Riegel hinzufÃ¼gen
 SRC += sd_card_lib/byteordering.c
 SRC += sd_card_lib/fat.c
 SRC += sd_card_lib/partition.c
 SRC += sd_card_lib/sd_raw.c
-#SRC += sd_card_lib/uart.c
 
 # List Assembler source files here.
 # Make them always end in a capital .S.  Files ending in a lowercase .s
@@ -221,7 +223,7 @@ AVRDUDE_WRITE_FUSE = -U lfuse:w:$(LFUSE):m -U hfuse:w:$(HFUSE):m -U efuse:w:$(EF
 # Increase verbosity level.  Please use this when submitting bug
 # reports about avrdude. See <http://savannah.nongnu.org/projects/avrdude> 
 # to submit bug reports.
-#AVRDUDE_VERBOSE = -v -v
+# AVRDUDE_VERBOSE = -v -v
 
 AVRDUDE_FLAGS = -c $(AVRDUDE_PROGRAMMER) -P $(AVRDUDE_PORT) -p $(MCU)
 AVRDUDE_FLAGS += $(AVRDUDE_NO_VERIFY)

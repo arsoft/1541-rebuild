@@ -1,12 +1,18 @@
 # 1541-rebuild
-Ersetzt den Analogteil einer Floppy 1541 II durch ein µC der Disk Images per SD Karte lesen kann. Mit dieser Hardware ist es möglich ein Board wo der Analogteil defekt ist, durch diese wieder zum laufen zu bringen. Das schreiben ist nun auch schon enthalten. Es wird lediglich die 1541II Platine, diese Hardware und ein 5VDC Netzteil benötigt. An der 1541 II Platine müssen einige Änderungen vorgenommen werden (VIA2 (DC) sockeln, 1 PIN vom Gate Arry trennen ...).
-Derzeit ist es möglich aus einem Root Verzeichnis einer SD Karte, D64 sowie G64 Images auszuwählen. Diese werden dann wie eine eingelgte Diskette erkannt und der C64 kann diese lesen. Als Anzeige kommt ein 4-Zeiliges LCD (20x4) zum Einsatz.
+Ersetzt den Analogteil einer Floppy 1541 durch ein Micro Controller der Disk Images per SD Karte lesen kann. Mit dieser Hardware ist es möglich ein Board wo der Analogteil defekt ist, durch diese wieder zum laufen zu bringen. Das schreiben ist nun auch schon enthalten. Es wird lediglich die 1541 Platine, diese Hardware und ein 5VDC Netzteil benötigt, oder auch das Originale Netzteil. An der 1541 II Platine muss eine Änderungen vorgenommen werden und zwar die (VIA2 (DC) sockeln.
+
+### [Letzte Offizelle Version findet ihr hier](https://github.com/ThKattanek/1541-rebuild/releases/latest)
 
 ### Hardware / Schaltplan
-Die Hardware wurde mit KiCad entwickelt. Version 4.0.7 unter Ubuntu.
+Die Hardware wird mit KiCad entwickelt. Version 5.1.4 unter Ubuntu.
 
 
-![Screenshot](/hardware/1541-rebuild.png)
+![image1](/doc/fotos/1541-rebuild_raytraced.png)
+![image2](/doc/fotos/platine_rev_1.4.0/IMG_20200430_231529.jpg)
+![image3](/doc/fotos/platine_rev_1.4.0/IMG_20200430_232355.jpg) 
+
+### Hier der Thread dazu im Forum64
+https://www.forum64.de/index.php?thread/59884-laufwerk-der-1541-emulieren
 
 ### Einige Videos von der 1541-rebuild in aktion
 https://youtu.be/EGB8lYKcW-g

@@ -1,7 +1,7 @@
 /* Name: main.h
 * Project: 1541-rebuild
 * Author: Thorsten Kattanek
-* Copyright: (c) 2018 by Thorsten Kattanek <thorsten.kattanek@gmx.de>
+* Copyright: (c) 2020 by Thorsten Kattanek <thorsten.kattanek@gmx.de>
 * License: GPL 2
 */
 
@@ -10,6 +10,7 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
+#include <avr/pgmspace.h>
 
 // Für die LCD Ansteuerung
 #include "./lcd.h"
@@ -21,8 +22,15 @@
 #include "./sd_card_lib/sd_raw.h"
 #include "./sd_card_lib/sd_raw_config.h"
 
+// Gui _ Menu
+#include "./gui_constants.h"
+#include "./menu.h"
+
 // Enthält nur die Versionsnummer als String
 #include "./version.h"
+
+// Settings speichern in EEPROM und Import / Export
+#include "./settings.h"
 
 #define NULL    ((void *)0)
 
@@ -33,24 +41,22 @@
 #define LCD_LINE_SIZE 20
 
 // Zeit in ms wie lange die Version nach dem Start angezeigt wird
-#define START_MESSAGE_TIME 2000
+#define START_MESSAGE_TIME 1500
 
 // Spur auf dem der Lesekopf beim Start/Reset stehen soll
 // Track 18 --> Directory
 #define INIT_TRACK 18
 
-// Prellzeit der Taster in ms
-#define PRELL_TIME 200
-
 // Zeit die nach der letzten Stepperaktivität vergehen muss, um einen neuen Track von SD Karte zu laden
 // (1541 Original Rom schaltet STP1 alle 15ms)
 // Default 15
-#define STEPPER_DELAY_TIME 5
+#define STEPPER_DELAY_TIME 193  // zwischen 26µs*193=5,02ms bis 32µs*160=6,176ms
 
-// DEBUG LED (Optional / vorrerst)
-#define DBG_LED_DDR DDRC
-#define DBG_LED_PORT PORTC
-#define DBG_LED PC7
+// SOE GATEWAY --> Ausgang
+// LO wenn SD Karte laufen soll damit ByteReady High bleibt
+#define SOE_GATEARRAY_DDR DDRC
+#define SOE_GATEARRAY_PORT PORTC
+#define SOE_GATEARRAY PC7
 
 // Anschluss der Stepper Signale
 // Zwingend diese PINs wegen Extern Interrupts PCINT6/7
@@ -73,8 +79,11 @@
 #define BYTE_READY_PORT PORTC
 #define BYTE_READY  PC0
 
-#define set_byte_ready() BYTE_READY_PORT |= 1 << BYTE_READY
-#define clear_byte_ready() BYTE_READY_PORT &= ~(1 << BYTE_READY)
+//DDxn = 0 , PORTxn = 0 --> HiZ
+//DDxn = 1 , PORTxn = 0 --> Output Low (Sink)
+
+#define set_byte_ready() BYTE_READY_DDR &= ~(1 << BYTE_READY)   // HiZ
+#define clear_byte_ready() BYTE_READY_DDR |= (1 << BYTE_READY)  // auf Ground ziehen
 
 // SYNC
 #define SYNC_DDR DDRC
@@ -98,13 +107,16 @@
 
 #define get_so_status() (SO_PIN & (1<<SO))
 
-// WPS
+// WPS (Write Protection)
+// PIN ist mit PIN14 U8 VIA6522 (Input) verbunden
+// PIN ist mit PIN14 (A) GateArray (Input) verbunden
+// PIN ist mit PIN8 LS04 DM74LS04N (Output) verbunden -> Einganag PIN9 hängt auf einen PullUp (47k)
 #define WPS_DDR DDRC
 #define WPS_PORT PORTC
 #define WPS  PC4
 
-#define set_wps() WPS_PORT |= 1 << WPS
-#define clear_wps() WPS_PORT &= ~(1 << WPS)
+#define set_wps() WPS_PORT |= 1 << WPS          // 5V Level = WritePotect
+#define clear_wps() WPS_PORT &= ~(1 << WPS)     // 0V Level = Writetable
 
 // Anschluss der Datenleitungen
 #define DATA_DDR   DDRD
@@ -130,17 +142,48 @@
 #define KEY2_PIN PINC
 #define KEY2	 PINC3
 
-#define get_key0_status() (~KEY0_PIN & (1<<KEY0))
-#define get_key1_status() (~KEY1_PIN & (1<<KEY1))
-#define get_key2_status() (~KEY2_PIN & (1<<KEY2))
+#define get_key0() (~KEY0_PIN & (1<<KEY0))
+#define get_key1() (~KEY1_PIN & (1<<KEY1))
+#define get_key2() (~KEY2_PIN & (1<<KEY2))
+
+// Drehimpulsgeber // Liegen immer auf KEY0 + KEY1
+/// \brief Pin Nummer des Ports für Drehgeber PIN 1A
+#define IMPULS_1A_PIN KEY1
+/// \brief Port für Drehgeber PIN 1A
+#define IMPULS_1A_PORT KEY1_PORT
+/// \brief Datenrichtungsregister des Ports für Drehgeber PIN 1A
+#define IMPULS_1A_DDR KEY1_DDR
+
+/// \brief Pin Nummer des Ports für Drehgeber PIN 1B
+#define IMPULS_1B_PIN KEY0
+/// \brief Port für Drehgeber PIN 1B
+#define IMPULS_1B_PORT KEY0_PORT
+/// \brief Datenrichtungsregister des Ports für Drehgeber PIN 1B
+#define IMPULS_1B_DDR KEY0_DDR
 
 //////////////////////////////////////////////////////////////////
 // #define __AVR_ATmega128__
 
 enum {UNDEF_IMAGE, G64_IMAGE, D64_IMAGE};
 
+void reset();
+void check_stepper_signals();
+void check_motor_signal();
+uint8_t get_key_from_buffer();
+void update_gui();
+void check_menu_events(uint16_t menu_event);
+void set_gui_mode(uint8_t gui_mode);
+void filebrowser_update(uint8_t key_code);
+void filebrowser_refresh();
+void init_pb2_pb3();
 int8_t init_sd_card(void);
+void release_sd_card(void);
+uint8_t change_dir(const char* path);
+uint8_t find_file_in_dir(struct fat_fs_struct* fs, struct fat_dir_struct* dd, const char* name, struct fat_dir_entry_struct* dir_entry);
+uint16_t get_dir_entry_count();
+uint16_t seek_to_dir_entry(uint16_t entry_num);
 void show_start_message(void);
+void show_sdcard_info_message();
 void init_stepper(void);
 void stepper_inc(void);
 void stepper_dec(void);
@@ -153,50 +196,84 @@ void init_timer2(void);
 void start_timer2(void);
 void stop_timer2(void);
 void init_keys(void);
-void dbg_led_init(void);
-void dbg_led_on(void);
-void dbg_led_off(void);
+void soe_gatearry_init(void);
+void soe_gatearry_lo(void);
+void soe_gatearry_hi(void);
 
-int8_t view_dir_entry(uint16_t entry_start, struct fat_dir_entry_struct* dir_entry);
 struct fat_file_struct* open_disk_image(struct fat_fs_struct *fs, struct fat_dir_entry_struct* file_entry, uint8_t *image_type);
 void close_disk_image(struct fat_file_struct*);
 int8_t open_g64_image(struct fat_file_struct *fd);
 int8_t open_d64_image(struct fat_file_struct *fd);
 int8_t read_disk_track(struct fat_file_struct *fd, uint8_t image_type, uint8_t track_nr, uint8_t* track_buffer, uint16_t *gcr_track_length); // Tracknummer 1-42
 void write_disk_track(struct fat_file_struct *fd, uint8_t image_type, uint8_t track_nr, uint8_t* track_buffer, uint16_t *gcr_track_length); // Tracknummer 1-42
+
+void remove_image();
+
 inline void ConvertToGCR(uint8_t *source_buffer, uint8_t *destination_buffer);
 
+void endable_wps_port(uint8_t enable);  // 0 = WPS PIN HiZ (set_write_protection() ohne Wirkung) / 1 = WPS PIN als Ausgang
 void set_write_protection(int8_t wp);   // wp=0 image nicht geschützt wp=1 image schreibgeschützt
 void send_disk_change(void);
 
 /////////////////////////////////////////////////////////////////
 // Globale Variablen
 
+// gui
+char image_filename[32]; //Maximal 32 Zeichen
+
+volatile uint8_t key_buffer[16];
+volatile uint8_t key_buffer_r_pos;
+volatile uint8_t key_buffer_w_pos;
+
+uint8_t input_mode = INPUT_MODE_ENCODER;
+
+uint8_t current_gui_mode;
+int8_t byte_str[16];
+
+uint8_t gui_current_line_offset;         // >0 dann ist der Name länger als die maximale Anzeigelaenge
+uint8_t gui_line_scroll_pos;             // Kann zwischen 0 und fb_current_line_offset liegen
+uint8_t gui_line_scroll_direction;       // Richtung des Scrollings
+uint8_t gui_line_scroll_end_begin_wait;
+
+// Alles für den Filebrowser
+uint8_t fb_lcd_dir_char;            // Char Nummer für Directory Symbol
+uint8_t fb_lcd_disk_char;           // Char Nummer für Diskimage Symbol
+uint8_t fb_lcd_cursor_char;         // Char für Auswahl Cursor
+uint8_t fb_lcd_more_top_char;
+uint8_t fb_lcd_more_down_char;
+uint16_t fb_dir_entry_count=0;      // Anzahl der Einträge im aktuellen Direktory
+uint8_t fb_lcd_cursor_pos=0;        // Position des Cursors auf dem LCD Display
+uint8_t fb_lcd_window_pos=0;        // Position des Anzeigebereichs innerhablb der Menüeinträge
+
+uint8_t fb_current_line_offset = 0;         // >0 dann ist der Name länger als die maximale Anzeigelaenge
+uint8_t fb_line_scroll_pos = 0;             // Kann zwischen 0 und fb_current_line_offset liegen
+uint8_t fb_line_scroll_direction = 0;       // Richtung des Scrollings
+uint8_t fb_line_scroll_end_begin_wait = 10;
+
+struct fat_dir_entry_struct fb_dir_entry[LCD_LINE_COUNT];
+
+// filesystem
 struct partition_struct* partition = NULL;
 struct fat_fs_struct* fs = NULL;
-struct fat_dir_entry_struct directory;
+struct fat_dir_entry_struct dir_entry;
 struct fat_dir_struct* dd = NULL;
 
 struct fat_dir_entry_struct file_entry;
 struct fat_file_struct* fd;
 
-uint8_t akt_image_type = 0;	// 0=kein Image, 1=G64, 2=D64
+// floppydisk emulation
+uint8_t akt_image_type = UNDEF_IMAGE;     // 0=kein Image, 1=G64, 2=D64
+uint8_t is_image_mount;
 
-int8_t floppy_wp = 0;           // Hier wird der aktuelle WriteProtection Zustand gespeichert / 0=Nicht Schreibgeschützt 1=Schreibgeschützt
+uint8_t is_wps_pin_enable = 0; // 0=WPS PIN=HiZ / 1=WPS Output
+int8_t floppy_wp = 0;          // Hier wird der aktuelle WriteProtection Zustand gespeichert / 0=Nicht Schreibgeschützt 1=Schreibgeschützt
 
 volatile static uint8_t stp_signals_old = 0;
 
-//War Volatile
 uint16_t gcr_track_length = 7139;
 
 volatile uint8_t akt_gcr_byte = 0;
 volatile uint16_t akt_track_pos = 0;
-
-char lcd_puffer[33]; // Maximal 32 Zeichen
-
-volatile uint16_t wait_key_counter0 = 0;
-volatile uint16_t wait_key_counter1 = 0;
-volatile uint16_t wait_key_counter2 = 0;
 
 uint8_t akt_half_track;
 uint8_t old_half_track;
@@ -224,12 +301,10 @@ const uint8_t d64_track_zone[41] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,        
 
 //Höhere Werte verlangsammen die Bitrate
 //const uint8_t timer0_orca0[4] = {64,69,74,79};            // Diese Werte erzeugen den genausten Bittakt aber nicht 100% (Bei 20MHz)
-const uint8_t timer0_orca0[4] = {77,83,89,95};            // Diese Werte erzeugen den genausten Bittakt aber nicht 100% (Bei 24MHz)
+const uint8_t timer0_orca0[4] = {77,83,89,95};              // Diese Werte erzeugen den genausten Bittakt aber nicht 100% (Bei 24MHz)
 
 const uint8_t d64_sector_gap[4] = {12, 21, 16, 13}; // von GPZ Code übermommen imggen
 #define HEADER_GAP_BYTES 9
-
-volatile uint8_t *test_addr;
 
 #define D64_SECTOR_SIZE 256
 
@@ -240,10 +315,8 @@ volatile uint8_t stepper_signal_w_pos = 0;
 volatile uint8_t stepper_signal_time = 0;
 volatile uint8_t stepper_signal = 0;
 
-volatile uint8_t stepper_msg = 0;   // 0-keine Stepperaktivität ; 1=StepperDec ; 2-255=StepperInc
-
-uint8_t gcr_track[8192];
-
 volatile uint8_t track_is_written = 0;
 volatile uint8_t track_is_written_old = 0;
 volatile uint8_t no_byte_ready_send = 0;
+
+uint8_t gcr_track[8192];
